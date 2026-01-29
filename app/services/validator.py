@@ -1,5 +1,8 @@
+from typing import List
+
+
 class VehicleValidator:
-    def __init__(self, basic_letters: list, special_letters: list):
+    def __init__(self, basic_letters: List[str], special_letters: List[str]):
         self.basic_letters = basic_letters
         self.special_letters = special_letters
 
@@ -19,8 +22,3 @@ class VehicleValidator:
             return len(registration_no) >= 6
 
         return False
-
-
-
-
-

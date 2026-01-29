@@ -1,5 +1,8 @@
+from typing import Dict, Union
+
+
 class PriceCalculator:
-    def __init__(self, prices: dict):
+    def __init__(self, prices: Dict[str, int | float]):
         self.prices = prices
 
     def calculate_fee(self, minutes: int, floor: int) -> float:
@@ -15,8 +18,5 @@ class PriceCalculator:
         if minutes <= 30:
             return 0.0
 
-        price_per_minute = self.prices[floor] / 60
-        billable_minutes = minutes - 30
-
-        fee = billable_minutes * price_per_minute
+        fee = ((minutes - 30) / 60) * self.prices[floor]
         return round(fee, 2)

@@ -1,23 +1,31 @@
+from typing import Dict, Any, Union
 from datetime import datetime
-from pricing import PriceCalculator
-from validator import VehicleValidator
+from app.services.pricing import PriceCalculator
+from app.services.validator import VehicleValidator
+
 
 class ParkingManager:
+    active_parkings: Dict[str, Dict[str, Any]]
+
     def __init__(self, price_calculator: PriceCalculator, validator: VehicleValidator):
         self.price_calculator = price_calculator
         self.validator = validator
         self.active_parkings = {}
 
-    def register_entry(self, country: str, registration_no: str, floor: int):
+    def register_entry(self, country: str, registration_no: str, floor: int) -> bool:
         if not self.validator.validate(country, registration_no):
             raise ValueError("Invalid registration number")
+
+        if floor not in self.price_calculator.prices:
+            raise ValueError(f"Floor {floor} is not available in this parking")
 
         self.active_parkings[registration_no] = {
             "entry_time": datetime.now(),
             "floor": floor
         }
+        return True
 
-    def get_payment_info(self, registration_no: str):
+    def get_payment_info(self, registration_no: str) -> Dict[str, Any]:
         if registration_no not in self.active_parkings:
             raise ValueError("Vehicle not found on parking")
 

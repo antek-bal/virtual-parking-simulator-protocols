@@ -37,3 +37,10 @@ class ParkingManager:
         fee = self.price_calculator.calculate_fee(minutes, entry_data["floor"])
 
         return {"registration_no": registration_no, "fee": fee, "minutes": minutes}
+
+    def register_exit(self, registration_no: str) -> bool:
+        if registration_no not in self.active_parkings:
+            raise ValueError("Vehicle not found on parking")
+
+        del self.active_parkings[registration_no]
+        return True

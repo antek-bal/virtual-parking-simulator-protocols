@@ -31,12 +31,14 @@ def update_floor(registration_no: str, update_data: UpdateFloorRequest):
     if registration_no not in manager.active_parkings:
         raise HTTPException(status_code=404, detail="Vehicle not found")
 
-    manager.active_parkings[registration_no]["floor"] = update_data.new_floor
+    manager.change_vehicle_floor(registration_no, update_data.floor)
     return {"status": True, "registration_no": registration_no, "new_floor": update_data.new_floor}
 
 
 @app.delete("/entry/{registration_no}")
 def register_vehicle_exit(registration_no: str):
+    if registration_no not in manager.active_parkings:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
     try:
         success = manager.register_exit(registration_no)
         return {"status": success, "registration_no": registration_no}
@@ -46,9 +48,10 @@ def register_vehicle_exit(registration_no: str):
 
 @app.get("/payment/{registration_no}")
 def get_payment(registration_no: str):
+    if registration_no not in manager.active_parkings:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
     try:
-        data = manager.get_payment_info(registration_no)
-        return data
+        return manager.get_payment_info(registration_no)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -61,3 +64,7 @@ def get_list_of_vehicles():
 @app.get('/entry/history')
 def get_history():
     return manager.history
+
+@app.get("/vehicles/search")
+def search_vehicles(q: str):
+    return {reg: data for reg, data in manager.active_parkings.items() if q.upper() in reg.upper()}

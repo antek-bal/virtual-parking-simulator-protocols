@@ -14,7 +14,7 @@ class TestParkingManager:
     def test_saving_to_dict(self, parking_manager, mocker):
         time = datetime(2026, 1, 29, 22, 46, 17)
 
-        mock_datetime = mocker.patch('app.services.parking_manager.datetime')
+        mock_datetime = mocker.patch('src.app.services.parking_manager.datetime')
         mock_datetime.now.return_value = time
 
         assert parking_manager.register_entry("PL", "GD5P227", 3) == True
@@ -28,7 +28,7 @@ class TestParkingManager:
     def test_get_payment_info_success(self, parking_manager, mocker):
         entry_time = datetime(2026, 1, 1, 10, 00, 00)
 
-        mock_datetime = mocker.patch('app.services.parking_manager.datetime')
+        mock_datetime = mocker.patch('src.app.services.parking_manager.datetime')
         mock_datetime.now.return_value = entry_time
 
         parking_manager.register_entry("PL", "GD5P227", 0)

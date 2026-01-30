@@ -1,7 +1,7 @@
 import pytest
-from app.services.pricing import PriceCalculator
-from app.services.validator import VehicleValidator
-from app.services.parking_manager import ParkingManager
+from src.app.services.pricing import PriceCalculator
+from src.app.services.validator import VehicleValidator
+from src.app.services.parking_manager import ParkingManager
 
 
 @pytest.fixture

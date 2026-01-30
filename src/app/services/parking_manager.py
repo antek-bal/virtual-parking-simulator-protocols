@@ -1,7 +1,7 @@
-from typing import Dict, Any, Union
+from typing import Dict, Any
 from datetime import datetime
-from app.services.pricing import PriceCalculator
-from app.services.validator import VehicleValidator
+from src.app.services.pricing import PriceCalculator
+from src.app.services.validator import VehicleValidator
 
 
 class ParkingManager:

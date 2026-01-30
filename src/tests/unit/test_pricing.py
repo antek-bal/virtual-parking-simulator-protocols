@@ -1,5 +1,4 @@
 import pytest
-from app.services.pricing import PriceCalculator
 
 
 class TestPriceCalculator:

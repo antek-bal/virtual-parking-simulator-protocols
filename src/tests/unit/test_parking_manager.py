@@ -40,7 +40,7 @@ class TestParkingManager:
         data = parking_manager.get_payment_info("GD5P227")
 
         assert data["registration_no"] == "GD5P227"
-        assert data["fee"] == 3.0
+        assert data["fee"] == 6.0
         assert data["minutes"] == 90
 
     def test_exit_invalid_registration(self, parking_manager):

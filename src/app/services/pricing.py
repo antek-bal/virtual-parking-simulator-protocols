@@ -2,7 +2,7 @@ from typing import Dict
 
 
 class PriceCalculator:
-    def __init__(self, prices: Dict[str, int | float]):
+    def __init__(self, prices: Dict[int, int | float]):
         self.prices = prices
 
     def calculate_fee(self, minutes: int, floor: int) -> float:

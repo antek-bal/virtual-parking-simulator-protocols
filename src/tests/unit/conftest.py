@@ -6,7 +6,7 @@ from src.app.services.parking_manager import ParkingManager
 
 @pytest.fixture
 def parking_prices():
-    return {0: 3, 1: 5, 2: 5, 3: 6, 4: 7}
+    return {0: 6, 1: 5, 2: 4, 3: 3, 4: 2}
 
 
 @pytest.fixture

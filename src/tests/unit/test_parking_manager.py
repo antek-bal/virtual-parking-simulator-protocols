@@ -139,5 +139,3 @@ class TestParkingManager:
 
         assert parking_manager.change_vehicle_floor("PL", "GD5P227", 1) == True
         assert parking_manager.active_parkings["PL_GD5P227"]["floor"] == 1
-
-

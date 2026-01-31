@@ -69,7 +69,6 @@ class ParkingManager:
             "payment_time": datetime.now()
         }
 
-
     def register_exit(self, country: str, registration_no: str) -> bool:
         vehicle_id = f"{country}_{registration_no}"
 

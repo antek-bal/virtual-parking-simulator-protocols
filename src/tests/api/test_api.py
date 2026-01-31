@@ -98,6 +98,7 @@ def test_register_vehicle_exit_invalid_registration():
 
     assert response.status_code == 400
 
+
 def test_payment_success():
     country = "PL"
     reg_no = "GD999XX"

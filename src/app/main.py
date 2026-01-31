@@ -87,6 +87,7 @@ def get_list_of_vehicles():
 def get_history():
     return manager.history
 
+
 @app.get("/vehicles/search")
 def search_vehicles(q: str):
     return {reg: data for reg, data in manager.active_parkings.items() if q.upper() in reg.upper()}

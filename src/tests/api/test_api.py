@@ -51,7 +51,7 @@ def test_update_floor_invalid_registration():
         "registration_no": "GD5P227"
     }
 
-    requests.patch(f"{BASE_URL}/entry/{payload["registration_no"]}", json={"floor": 0})
+    requests.patch(f"{BASE_URL}/entry/{payload['registration_no']}", json={"floor": 0})
 
 def test_update_floor_invalid_floor():
     payload = {

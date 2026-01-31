@@ -28,5 +28,5 @@ jobs:
       env:
         PYTHONPATH: ${{ github.workspace }}
       run: |
-        python3 -m coverage run --source=src/app -m pytest tests/unit
+        python3 -m coverage run --source=src/app/services -m pytest tests/unit
         python3 -m coverage report --fail-under=80

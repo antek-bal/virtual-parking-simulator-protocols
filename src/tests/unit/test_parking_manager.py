@@ -80,3 +80,20 @@ class TestParkingManager:
         parking_manager.register_exit("GD5P227")
 
         assert len(parking_manager.history["GD5P227"]) == 2
+
+    def test_change_floor_invalid_registration(self, parking_manager):
+        with pytest.raises(ValueError):
+            parking_manager.change_vehicle_floor("GD5P227", 0)
+
+    def test_change_floor_invalid_floor(self, parking_manager):
+        parking_manager.register_entry("PL", "GD5P227", 0)
+        with pytest.raises(ValueError):
+            parking_manager.change_vehicle_floor("GD5P227", 5)
+
+    def test_change_floor_valid(self, parking_manager):
+        parking_manager.register_entry("PL", "GD5P227", 0)
+
+        assert parking_manager.change_vehicle_floor("GD5P227", 1) == True
+        assert parking_manager.active_parkings["GD5P227"]["floor"] == 1
+
+

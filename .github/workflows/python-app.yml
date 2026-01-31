@@ -34,7 +34,20 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test with pytest
+    - name: Tests with Pytest
+      env:
+        PYTHONPATH: ${{ github.workspace }}/src
       run: |
-        python3 -m coverage run --source=src -m pytest
+        python3 -m coverage run -p --source=src -m pytest src/tests/unit/
+        
+        python3 -m coverage run -p --source=src -m uvicorn app.main:app --app-dir src &
+        SERVER_PID=$!
+        sleep 5
+        
+        pytest tests/api/
+        
+        kill -SIGINT $SERVER_PID
+        sleep 2
+        
+        python3 -m coverage combine
         python3 -m coverage report --fail-under=100

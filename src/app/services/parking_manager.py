@@ -55,3 +55,12 @@ class ParkingManager:
 
         del self.active_parkings[registration_no]
         return True
+
+    def change_vehicle_floor(self, registration_no: str, new_floor: int) -> bool:
+        if registration_no not in self.active_parkings:
+            raise ValueError("Vehicle not found on parking")
+        if new_floor not in self.price_calculator.prices:
+            raise ValueError(f"Floor {new_floor} is not available in this parking")
+
+        self.active_parkings[registration_no]["floor"] = new_floor
+        return True

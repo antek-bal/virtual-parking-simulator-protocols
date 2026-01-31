@@ -21,20 +21,22 @@ def read_root():
 def register_vehicle_entry(entry: EntryRequest):
     try:
         success = manager.register_entry(entry.country, entry.registration_no, entry.floor)
-        return {"status": success, "registration_no": entry.registration_no}
+        return {"status": success, "country": entry.country, "registration_no": entry.registration_no}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.patch("/entry/{registration_no}")
-def update_floor(registration_no: str, update_data: UpdateFloorRequest):
-    if registration_no not in manager.active_parkings:
+@app.patch("/entry/{country}/{registration_no}")
+def update_floor(country: str, registration_no: str, update_data: UpdateFloorRequest):
+    vehicle_id = f"{country}_{registration_no}"
+    if vehicle_id not in manager.active_parkings:
         raise HTTPException(status_code=404, detail="Vehicle not found")
 
     try:
-        manager.change_vehicle_floor(registration_no, update_data.new_floor)
+        manager.change_vehicle_floor(country, registration_no, update_data.new_floor)
         return {
             "status": True,
+            "country": country,
             "registration_no": registration_no,
             "new_floor": update_data.new_floor
         }
@@ -42,23 +44,25 @@ def update_floor(registration_no: str, update_data: UpdateFloorRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.delete("/entry/{registration_no}")
-def register_vehicle_exit(registration_no: str):
-    if registration_no not in manager.active_parkings:
+@app.delete("/entry/{country}/{registration_no}")
+def register_vehicle_exit(country: str, registration_no: str):
+    vehicle_id = f"{country}_{registration_no}"
+    if vehicle_id not in manager.active_parkings:
         raise HTTPException(status_code=404, detail="Vehicle not found")
     try:
-        success = manager.register_exit(registration_no)
-        return {"status": success, "registration_no": registration_no}
+        success = manager.register_exit(country, registration_no)
+        return {"status": success, "country": country, "registration_no": registration_no}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/payment/{registration_no}")
-def get_payment(registration_no: str):
-    if registration_no not in manager.active_parkings:
+@app.get("/payment/{country}/{registration_no}")
+def get_payment(country: str, registration_no: str):
+    vehicle_id = f"{country}_{registration_no}"
+    if vehicle_id not in manager.active_parkings:
         raise HTTPException(status_code=404, detail="Vehicle not found")
     try:
-        return manager.get_payment_info(registration_no)
+        return manager.get_payment_info(country, registration_no)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

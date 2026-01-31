@@ -44,7 +44,7 @@ jobs:
         SERVER_PID=$!
         sleep 5
         
-        pytest tests/api/
+        pytest src/tests/api/
         
         kill -SIGINT $SERVER_PID
         sleep 2

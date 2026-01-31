@@ -39,17 +39,17 @@ This project implements a testing strategy integrated with **GitHub Actions** fo
 
 ### 1. Unit Tests
 Focuses on core business logic (Pricing, Validation, Parking Management).
-* **Execution:** `pytest tests/unit`
+* **Execution:** `python -m pytest tests/unit`
 * **Pipeline:** Handled by `python-app.yml`.
 
 ### 2. API & BDD Tests
 Tests HTTP endpoints and business scenarios using **Behave** (Gherkin). To execute these tests, the application must be running.
-* **Execution:** `pytest tests/api` and `behave`
+* **Execution:** `python -m pytest tests/api` and `behave`
 * **Pipeline:** Handled by `api-tests.yml`.
 
 ### 3. Performance Tests
 Verifies system stability and latency by simulating 1000+ concurrent operations.
-* **Execution:** `pytest tests/perf`
+* **Execution:** `python -m pytest tests/perf`
 * **Threshold:** Each operation must complete in less than 0.5s.
 * **Pipeline:** Handled by `performance-tests.yml`.
 

@@ -23,7 +23,6 @@ jobs:
       env:
         PYTHONPATH: ${{ github.workspace }}
       run: |
-        # Startujemy uvicorn zamiast flask
         python3 -m uvicorn src.app.main:app --host 127.0.0.1 --port 8000 &
         sleep 5
     - name: Execute API tests

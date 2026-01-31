@@ -30,7 +30,7 @@ The **Virtual Parking Simulator** is a backend application built with **FastAPI*
 ### Running the Application
 To start the FastAPI server locally, run:
 ```bash
-uvicorn src.app.main:app --reload
+python -m uvicorn src.app.main:app --reload
 ```
 The API documentation (Swagger UI) will be available at: `http://127.0.0.1:8000/docs`.
 
@@ -43,7 +43,7 @@ Focuses on core business logic (Pricing, Validation, Parking Management).
 * **Pipeline:** Handled by `python-app.yml`.
 
 ### 2. API & BDD Tests
-Tests HTTP endpoints and business scenarios using **Behave** (Gherkin).
+Tests HTTP endpoints and business scenarios using **Behave** (Gherkin). To execute these tests, the application must be running.
 * **Execution:** `pytest tests/api` and `behave`
 * **Pipeline:** Handled by `api-tests.yml`.
 

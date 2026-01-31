@@ -36,18 +36,27 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Tests with Pytest
       env:
-        PYTHONPATH: ${{ github.workspace }}/src
+        PYTHONPATH: ${{ github.workspace }}
       run: |
         python3 -m coverage run -p --source=src -m pytest src/tests/unit/
-        
-        python3 -m coverage run -p --source=src -m uvicorn app.main:app --app-dir src &
-        SERVER_PID=$!
+
+    - name: Start FastAPI Server
+      run: |
+        python3 -m coverage run -p --source=src/app -m uvicorn src.app.main:app --host 127.0.0.1 --port 8000 &
+        echo "SERVER_PID=$!" >> $GITHUB_ENV
         sleep 5
         
+    - name: Run API Tests
+      run: |
         pytest src/tests/api/
-        
-        kill -SIGINT $SERVER_PID
+
+    - name: Run BDD Tests
+      run: |
+        behave
+
+    - name: Stop Server and Generate Coverage Report
+      run: |
+        kill -SIGINT ${{ env.SERVER_PID }}
         sleep 2
-        
         python3 -m coverage combine
         python3 -m coverage report --fail-under=80

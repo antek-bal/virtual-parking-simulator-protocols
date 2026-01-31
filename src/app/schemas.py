@@ -9,3 +9,7 @@ class EntryRequest(BaseModel):
 
 class UpdateFloorRequest(BaseModel):
     new_floor: int = Field(..., ge=0, le=4)
+
+
+class PaymentRequest(BaseModel):
+    amount: float = Field(..., ge=0)

@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from src.app.schemas import EntryRequest, UpdateFloorRequest
+from src.app.schemas import EntryRequest, UpdateFloorRequest, PaymentRequest
 from src.app.services.parking_manager import ParkingManager
 from src.app.services.pricing import PriceCalculator
 from src.app.services.validator import VehicleValidator
@@ -63,6 +63,17 @@ def get_payment(country: str, registration_no: str):
         raise HTTPException(status_code=404, detail="Vehicle not found")
     try:
         return manager.get_payment_info(country, registration_no)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/payment/{country}/{registration_no}", status_code=200)
+def make_payment(country: str, registration_no: str, payment: PaymentRequest):
+    vehicle_id = f"{country}_{registration_no}"
+    if vehicle_id not in manager.active_parkings:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    try:
+        return manager.pay_parking_fee(country, registration_no, payment.amount)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

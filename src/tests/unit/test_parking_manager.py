@@ -49,26 +49,62 @@ class TestParkingManager:
         assert data["fee"] == 6.0
         assert data["minutes"] == 90
 
+    def test_pay_parking_fee_success(self, parking_manager, mocker):
+        entry_time = datetime(2026, 1, 1, 10, 00, 00)
+
+        mock_datetime = mocker.patch('src.app.services.parking_manager.datetime')
+        mock_datetime.now.return_value = entry_time
+
+        parking_manager.register_entry("PL", "GD5P227", 0)
+
+        payment_time = datetime(2026, 1, 1, 11, 30, 00)
+
+        mock_datetime.now.return_value = payment_time
+
+        res = parking_manager.pay_parking_fee("PL", "GD5P227", 6.0)
+        assert res["status"] == True
+        assert res["fee"] == 6.0
+        assert res["payment_time"] == payment_time
+
+    def test_pay_parking_fee_insufficient_amount(self, parking_manager, mocker):
+        entry_time = datetime(2026, 1, 1, 10, 00, 00)
+
+        mock_datetime = mocker.patch('src.app.services.parking_manager.datetime')
+        mock_datetime.now.return_value = entry_time
+
+        parking_manager.register_entry("PL", "GD5P227", 0)
+
+        payment_time = datetime(2026, 1, 1, 11, 30, 00)
+
+        mock_datetime.now.return_value = payment_time
+
+        with pytest.raises(ValueError):
+            parking_manager.pay_parking_fee("PL", "GD5P227", 1.0)
+
     def test_exit_invalid_registration(self, parking_manager):
         with pytest.raises(ValueError):
             parking_manager.register_exit("PL", "GD5P227")
 
     def test_exit_success(self, parking_manager):
         parking_manager.register_entry("PL", "GD5P227", 0)
+        parking_manager.pay_parking_fee("PL", "GD5P227", 0.0)
 
         assert parking_manager.register_exit("PL", "GD5P227") == True
         assert len(parking_manager.active_parkings) == 0
 
     def test_saving_to_history(self, parking_manager, mocker):
         entry_time = datetime(2026, 1, 29, 10, 00, 00)
-
         mock_datetime = mocker.patch('src.app.services.parking_manager.datetime')
         mock_datetime.now.return_value = entry_time
 
         parking_manager.register_entry("PL", "GD5P227", 3)
 
-        exit_time = datetime(2026, 1, 29, 11, 30, 00)
+        pay_time = datetime(2026, 1, 29, 11, 30, 00)
+        mock_datetime.now.return_value = pay_time
 
+        parking_manager.pay_parking_fee("PL", "GD5P227", 3.0)
+
+        exit_time = datetime(2026, 1, 29, 11, 40, 00)
         mock_datetime.now.return_value = exit_time
 
         parking_manager.register_exit("PL", "GD5P227")
@@ -80,9 +116,11 @@ class TestParkingManager:
 
     def test_multiple_parkings_in_history(self, parking_manager):
         parking_manager.register_entry("PL", "GD5P227", 0)
+        parking_manager.pay_parking_fee("PL", "GD5P227", 0.0)
         parking_manager.register_exit("PL", "GD5P227")
 
         parking_manager.register_entry("PL", "GD5P227", 1)
+        parking_manager.pay_parking_fee("PL", "GD5P227", 0.0)
         parking_manager.register_exit("PL", "GD5P227")
 
         assert len(parking_manager.history["PL_GD5P227"]) == 2

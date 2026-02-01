@@ -1,105 +1,65 @@
-from collections import defaultdict
-from typing import Dict, Any, List
-from datetime import datetime, timedelta
+from typing import List, Optional
+from sqlalchemy.orm import Session
+from src.app.models.parking import Vehicle, ActiveParking, ParkingHistory
 from src.app.services.pricing import PriceCalculator
 from src.app.services.validator import VehicleValidator
-
+from datetime import datetime, timedelta
 
 class ParkingManager:
-    active_parkings: Dict[str, Dict[str, Any]]
-    history: Dict[str, List[Dict[str, Any]]]
-
-    def __init__(self, price_calculator: PriceCalculator, validator: VehicleValidator):
+    def __init__(self, db: Session, price_calculator: PriceCalculator, validator: VehicleValidator):
+        self.db = db
         self.price_calculator = price_calculator
         self.validator = validator
-        self.active_parkings = {}
-        self.history = defaultdict(list)
 
     def register_entry(self, country: str, registration_no: str, floor: int) -> bool:
         if not self.validator.validate(country, registration_no):
             raise ValueError("Invalid registration number")
 
-        vehicle_id = f"{country}_{registration_no}"
+        vehicle = self.db.query(Vehicle).filter_by(registration_no=registration_no, country=country).first()
+        if not vehicle:
+            vehicle = Vehicle(country=country, registration_no=registration_no)
+            self.db.add(vehicle)
+            self.db.flush()
 
-        if vehicle_id in self.active_parkings:
+        if self.db.query(ActiveParking).filter_by(vehicle_id=vehicle.id).first():
             raise ValueError("Vehicle already in the parking")
 
-        if floor not in self.price_calculator.prices:
-            raise ValueError(f"Floor {floor} is not available in this parking")
-
-        self.active_parkings[vehicle_id] = {
-            "entry_time": datetime.now(),
-            "floor": floor,
-            "is_paid": False,
-            "payment_time": None,
-            "paid_fee": None
-        }
+        new_entry = ActiveParking(vehicle_id=vehicle.id, floor=floor, entry_time=datetime.now())
+        self.db.add(new_entry)
+        self.db.commit()
         return True
 
-    def get_payment_info(self, country: str, registration_no: str) -> Dict[str, Any]:
-        vehicle_id = f"{country}_{registration_no}"
-        if vehicle_id not in self.active_parkings:
+    def get_payment_info(self, country: str, registration_no: str):
+        vehicle = self.db.query(Vehicle).filter_by(registration_no=registration_no, country=country).first()
+        if not vehicle or not vehicle.active_parking:
             raise ValueError("Vehicle not found on parking")
 
-        entry_data = self.active_parkings[vehicle_id]
-
-        duration = datetime.now() - entry_data["entry_time"]
+        duration = datetime.now() - vehicle.active_parking.entry_time
         minutes = int(duration.total_seconds() / 60)
-
-        fee = self.price_calculator.calculate_fee(minutes, entry_data["floor"])
+        fee = self.price_calculator.calculate_fee(minutes, vehicle.active_parking.floor)
 
         return {"country": country, "registration_no": registration_no, "fee": fee, "minutes": minutes}
 
-    def pay_parking_fee(self, country: str, registration_no: str, amount: float) -> Dict[str, Any]:
-        payment_info = self.get_payment_info(country, registration_no)
-        required_fee = payment_info["fee"]
-
-        if amount < required_fee:
-            raise ValueError("Insufficient amount")
-
-        vehicle_id = f"{country}_{registration_no}"
-
-        self.active_parkings[vehicle_id]["is_paid"] = True
-        self.active_parkings[vehicle_id]["payment_time"] = datetime.now()
-        self.active_parkings[vehicle_id]["paid_fee"] = required_fee
-
-        return {
-            "status": True,
-            "fee": required_fee,
-            "payment_time": datetime.now()
-        }
-
     def register_exit(self, country: str, registration_no: str) -> bool:
-        vehicle_id = f"{country}_{registration_no}"
-
-        if vehicle_id not in self.active_parkings:
+        vehicle = self.db.query(Vehicle).filter_by(registration_no=registration_no, country=country).first()
+        if not vehicle or not vehicle.active_parking:
             raise ValueError("Vehicle not found on parking")
 
-        entry_data = self.active_parkings[vehicle_id]
-
-        if not entry_data["is_paid"]:
+        active = vehicle.active_parking
+        if not active.is_paid:
             raise ValueError("Parking fee not paid")
 
-        time_since_pay = datetime.now() - entry_data["payment_time"]
-        if time_since_pay > timedelta(minutes=15):
+        if datetime.now() - active.payment_time > timedelta(minutes=15):
             raise ValueError("Payment expired. 15 minutes exceeded")
 
-        self.history[vehicle_id].append({
-            "entry_time": entry_data["entry_time"],
-            "exit_time": datetime.now(),
-            "floor": entry_data["floor"],
-            "fee": entry_data["paid_fee"]
-        })
-
-        del self.active_parkings[vehicle_id]
-        return True
-
-    def change_vehicle_floor(self, country: str, registration_no: str, new_floor: int) -> bool:
-        vehicle_id = f"{country}_{registration_no}"
-        if vehicle_id not in self.active_parkings:
-            raise ValueError("Vehicle not found on parking")
-        if new_floor not in self.price_calculator.prices:
-            raise ValueError(f"Floor {new_floor} is not available in this parking")
-
-        self.active_parkings[vehicle_id]["floor"] = new_floor
+        history_entry = ParkingHistory(
+            vehicle_id=vehicle.id,
+            entry_time=active.entry_time,
+            exit_time=datetime.now(),
+            floor=active.floor,
+            fee=active.paid_fee
+        )
+        self.db.add(history_entry)
+        self.db.delete(active)
+        self.db.commit()
         return True

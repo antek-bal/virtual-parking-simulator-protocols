@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from src.app.database import engine, get_db
 from src.app import models
 from src.app.schemas import EntryRequest, UpdateFloorRequest, PaymentRequest
@@ -82,12 +82,12 @@ def make_payment(country: str, registration_no: str, payment: PaymentRequest,
 
 @app.get('/vehicles')
 def get_list_of_vehicles(db: Session = Depends(get_db)):
-    return db.query(models.ActiveParking).all()
+    return db.query(models.ActiveParking).options(joinedload(models.ActiveParking.vehicle)).all()
 
 
 @app.get('/entry/history')
 def get_history(db: Session = Depends(get_db)):
-    return db.query(models.ParkingHistory).all()
+    return db.query(models.ParkingHistory).options(joinedload(models.ParkingHistory.vehicle)).all()
 
 
 @app.get("/vehicles/search")

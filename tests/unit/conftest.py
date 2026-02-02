@@ -1,7 +1,24 @@
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from src.app.models.base import Base
 from src.app.services.pricing import PriceCalculator
 from src.app.services.validator import VehicleValidator
 from src.app.services.parking_manager import ParkingManager
+
+
+@pytest.fixture
+def db_session():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+
+    SessionLocal = sessionmaker(bind=engine)
+    session = SessionLocal()
+
+    yield session
+
+    session.close()
+    Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture
@@ -30,5 +47,5 @@ def vehicle_validator(basic_letters, special_letters):
 
 
 @pytest.fixture
-def parking_manager(price_calculator, vehicle_validator):
-    return ParkingManager(price_calculator, vehicle_validator)
+def parking_manager(db_session, price_calculator, vehicle_validator):
+    return ParkingManager(db_session, price_calculator, vehicle_validator)

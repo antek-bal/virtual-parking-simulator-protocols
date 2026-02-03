@@ -81,11 +81,11 @@ def logout():
 
 
 @app.post("/entry", status_code=201)
-def register_vehicle_entry(entry: EntryRequest, manager: ParkingManager = Depends(get_parking_manager)):
+async def register_vehicle_entry(entry: EntryRequest, manager: ParkingManager = Depends(get_parking_manager)):
     try:
         result = manager.register_entry(entry.country, entry.registration_no, entry.floor)
 
-        ws_manager.broadcast({
+        await ws_manager.broadcast({
             "type": "VEHICLE_ENTRY",
             "reg_no": entry.registration_no,
             "floor": result['floor'],
@@ -98,10 +98,18 @@ def register_vehicle_entry(entry: EntryRequest, manager: ParkingManager = Depend
 
 
 @app.patch("/entry/{country}/{registration_no}")
-def update_floor(country: str, registration_no: str, update_data: UpdateFloorRequest,
+async def update_floor(country: str, registration_no: str, update_data: UpdateFloorRequest,
                  manager: ParkingManager = Depends(get_parking_manager)):
     try:
         manager.change_vehicle_floor(country, registration_no, update_data.new_floor)
+
+        await ws_manager.broadcast({
+            "type": "VEHICLE_UPDATED",
+            "reg_no": registration_no,
+            "floor": update_data.new_floor,
+            "msg": f"Moved to Floor {update_data.new_floor}"
+        })
+
         return {
             "status": True,
             "country": country,
@@ -114,12 +122,12 @@ def update_floor(country: str, registration_no: str, update_data: UpdateFloorReq
 
 
 @app.delete("/entry/{country}/{registration_no}")
-def register_vehicle_exit(country: str, registration_no: str,
+async def register_vehicle_exit(country: str, registration_no: str,
                                 manager: ParkingManager = Depends(get_parking_manager)):
     try:
         result = manager.register_exit(country, registration_no)
 
-        ws_manager.broadcast({
+        await ws_manager.broadcast({
             "type": "VEHICLE_EXIT",
             "reg_no": registration_no,
             "floor": result['floor'],
@@ -141,12 +149,12 @@ def get_payment(country: str, registration_no: str, manager: ParkingManager = De
 
 
 @app.post("/payment/{country}/{registration_no}", status_code=200)
-def make_payment(country: str, registration_no: str, payment: PaymentRequest,
+async def make_payment(country: str, registration_no: str, payment: PaymentRequest,
                        manager: ParkingManager = Depends(get_parking_manager)):
     try:
         manager.pay_parking_fee(country, registration_no, payment.amount)
 
-        ws_manager.broadcast({
+        await ws_manager.broadcast({
             "type": "PAYMENT_SUCCESS",
             "reg_no": registration_no,
             "amount": payment.amount

@@ -76,6 +76,10 @@ function initWebSocket() {
                 occupancySpan.innerText = parseInt(occupancySpan.innerText) + 1;
                 listActiveVehicles();
                 break;
+            case "VEHICLE_UPDATED":
+                message = `<p class="exit">[${time}] <b>${data.reg_no}</b> moved to Floor ${data.floor}</p>`;
+                listActiveVehicles();
+                break;
             case "VEHICLE_EXIT":
                 message = `<p class="exit">[${time}] <b>${data.reg_no}</b> exited.</p>`;
                 let current = parseInt(occupancySpan.innerText);

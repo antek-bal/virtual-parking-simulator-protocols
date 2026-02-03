@@ -12,8 +12,8 @@
         <div class="login-box">
             <h1>Parking Admin</h1>
             <p>Log in to access the dashboard</p>
-            <input type="text" id="username" placeholder="Username (admin)" value="admin">
-            <input type="password" id="password" placeholder="Password (admin)" value="admin">
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
             <button onclick="handleLogin()" class="btn-primary">Login</button>
             <p id="login-error" class="error-msg"></p>
         </div>
@@ -56,9 +56,9 @@
                     <div class="form-group">
                         <label>Manual Entry</label>
                         <div class="input-row">
-                            <input type="text" id="park_reg" placeholder="Reg No (e.g. GDA123)">
+                            <input type="text" id="park_reg" placeholder="Registration number">
                             <input type="text" id="park_country" placeholder="Country" value="PL" style="width: 60px;">
-                            <input type="number" id="park_floor" placeholder="Floor" value="1" min="0" max="4" style="width: 60px;">
+                            <input type="number" id="park_floor" placeholder="Floor" value="" min="0" max="4" style="width: 60px;">
                             <button onclick="manualEntry()" class="btn-success">Entry</button>
                         </div>
                     </div>
@@ -66,9 +66,9 @@
                     <div class="form-group">
                         <label>Manage Vehicle</label>
                         <div class="input-row">
-                            <input type="text" id="manage_reg" placeholder="Reg No to manage">
+                            <input type="text" id="manage_reg" placeholder="Registration number">
                             <button onclick="updateFloor()" class="btn-warning">Move Floor</button>
-                            <button onclick="manualExit()" class="btn-danger">Force Exit</button>
+                            <button onclick="manualExit()" class="btn-danger">Exit</button>
                         </div>
                     </div>
                      <div id="parking-response" class="api-response"></div>

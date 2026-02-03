@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Parking Real-Time Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <h1>Parking Dashboard</h1>
+    <div class="stats">
+        <div class="stats">
+            <div class="stat-card">
+                <h2>System Status: <span id="status">OPEN</span></h2>
+            </div>
+            <div class="stat-card">
+                <h2>Parked Cars: <span id="occupancy">0</span></h2>
+            </div>
+            <div id="revenue-card" class="stat-card">
+                <h2>Total Revenue: <span id="revenue">0.00</span> PLN</h2>
+            </div>
+        </div>
+    </div>
+
+    <h3>Event Stream:</h3>
+    <div id="events" class="event-log"></div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

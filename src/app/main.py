@@ -1,4 +1,6 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session, joinedload
 from src.app.database import engine, get_db
 from src.app import models
@@ -7,7 +9,9 @@ from src.app.services.parking_manager import ParkingManager
 from src.app.services.pricing import PriceCalculator
 from src.app.services.validator import VehicleValidator
 from src.app.services.mqtt_service import MQTTService
+from src.app.websocket_manager import ws_manager
 from contextlib import asynccontextmanager
+import os
 
 mqtt_service = MQTTService()
 
@@ -18,6 +22,17 @@ async def lifespan(app: FastAPI):
     yield
 app = FastAPI(title="Virtual Parking Simulator", lifespan=lifespan)
 
+static_path = os.path.join(os.path.dirname(__file__), "static")
+app.mount("/static", StaticFiles(directory=static_path), name="static")
+
+@app.websocket("/ws/stats")
+async def websocket_endpoint(websocket: WebSocket):
+    await ws_manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
 
 def get_parking_manager(db: Session = Depends(get_db)):
     prices = {0: 6, 1: 5, 2: 4, 3: 3, 4: 2}
@@ -32,6 +47,15 @@ def get_parking_manager(db: Session = Depends(get_db)):
 @app.get("/")
 def read_root():
     return {"message": "Parking Simulator is online"}
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def get_dashboard():
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    html_path = os.path.join(base_path, "templates", "dashboard.html")
+
+    with open(html_path, "r", encoding="utf-8") as f:
+        return f.read()
 
 
 @app.post("/entry", status_code=201)

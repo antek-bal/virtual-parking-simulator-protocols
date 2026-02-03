@@ -12,12 +12,12 @@ class ParkingManager:
         self.price_calculator = price_calculator
         self.validator = validator
 
-    def register_entry(self, country: str, registration_no: str, floor: int) -> bool:
+    def register_entry(self, country: str, registration_no: str, requested_floor: int) -> Dict[str, Any]:
         if not self.validator.validate(country, registration_no):
             raise ValueError("Invalid registration number")
 
-        if floor < 0 or floor > 4:
-            raise ValueError(f"Floor {floor} is not available")
+        if requested_floor < 0 or requested_floor > 4:
+            raise ValueError(f"Floor {requested_floor} is not available")
 
         vehicle = self.db.query(Vehicle).filter_by(registration_no=registration_no, country=country).first()
         if not vehicle:
@@ -28,10 +28,36 @@ class ParkingManager:
         if self.db.query(ActiveParking).filter_by(vehicle_id=vehicle.id).first():
             raise ValueError("Vehicle already in the parking")
 
-        new_entry = ActiveParking(vehicle_id=vehicle.id, floor=floor, entry_time=datetime.now())
+        all_floors = [0, 1, 2, 3, 4]
+        search_order = [requested_floor] + [f for f in all_floors if f != requested_floor]
+
+        assigned_floor = None
+        assigned_spot = None
+
+        for floor in search_order:
+            occupied = self.db.query(ActiveParking.spot_number).filter_by(floor=floor).all()
+            occupied_spots = {s[0] for s in occupied}
+
+            for spot in range(1, 51):
+                if spot not in occupied_spots:
+                    assigned_floor = floor
+                    assigned_spot = spot
+                    break
+
+            if assigned_spot:
+                break
+
+        if assigned_spot is None:
+            raise ValueError("Parking is completely full")
+
+        new_entry = ActiveParking(vehicle_id=vehicle.id, floor=assigned_floor, spot_number=assigned_spot, entry_time=datetime.now())
         self.db.add(new_entry)
         self.db.commit()
-        return True
+        return {
+            "floor": assigned_floor,
+            "spot": assigned_spot,
+            "status": True,
+        }
 
     def get_payment_info(self, country: str, registration_no: str) -> Dict[str, Any]:
         vehicle = self.db.query(Vehicle).filter_by(registration_no=registration_no, country=country).first()
@@ -71,7 +97,7 @@ class ParkingManager:
             "payment_time": active.payment_time
         }
 
-    def register_exit(self, country: str, registration_no: str) -> bool:
+    def register_exit(self, country: str, registration_no: str) -> Dict[str, Any]:
         vehicle = self.db.query(Vehicle).filter_by(registration_no=registration_no, country=country).first()
         if not vehicle or not vehicle.active_parking:
             raise ValueError("Vehicle not found on parking")
@@ -83,17 +109,20 @@ class ParkingManager:
         if datetime.now() - active.payment_time > timedelta(minutes=15):
             raise ValueError("Payment expired. 15 minutes exceeded")
 
+        floor = active.floor
+        spot = active.spot_number
+
         history_entry = ParkingHistory(
             vehicle_id=vehicle.id,
             entry_time=active.entry_time,
             exit_time=datetime.now(),
-            floor=active.floor,
+            floor=floor,
             fee=active.paid_fee
         )
         self.db.add(history_entry)
         self.db.delete(active)
         self.db.commit()
-        return True
+        return {"floor": floor, "spot" : spot, "status": True}
 
     def change_vehicle_floor(self, country: str, registration_no: str, new_floor: int) -> bool:
         if new_floor < 0 or new_floor > 4:

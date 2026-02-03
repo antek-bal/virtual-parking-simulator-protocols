@@ -6,11 +6,15 @@ from src.app.schemas import EntryRequest, UpdateFloorRequest, PaymentRequest
 from src.app.services.parking_manager import ParkingManager
 from src.app.services.pricing import PriceCalculator
 from src.app.services.validator import VehicleValidator
+from src.app.services.mqtt_service import MQTTService
 from contextlib import asynccontextmanager
+
+mqtt_service = MQTTService()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     models.Base.metadata.create_all(bind=engine)
+    mqtt_service.start()
     yield
 app = FastAPI(title="Virtual Parking Simulator", lifespan=lifespan)
 

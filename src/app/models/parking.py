@@ -28,6 +28,7 @@ class ActiveParking(Base):
     vehicle_id = Column(Integer, ForeignKey("vehicles.id"), primary_key=True)
     entry_time = Column(DateTime, default=datetime.now, nullable=False)
     floor = Column(Integer, nullable=False)
+    spot_number = Column(Integer, nullable=False)
     is_paid = Column(Boolean, default=False)
     payment_time = Column(DateTime, nullable=True)
     paid_fee = Column(Float, nullable=True)

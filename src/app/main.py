@@ -1,7 +1,12 @@
 from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session, joinedload
+from pydantic import BaseModel
+from typing import List, Optional
+import os
+from contextlib import asynccontextmanager
 from src.app.database import engine, get_db
 from src.app import models
 from src.app.schemas import EntryRequest, UpdateFloorRequest, PaymentRequest
@@ -10,20 +15,22 @@ from src.app.services.pricing import PriceCalculator
 from src.app.services.validator import VehicleValidator
 from src.app.services.mqtt_service import MQTTService
 from src.app.websocket_manager import ws_manager
-from contextlib import asynccontextmanager
-import os
 
 mqtt_service = MQTTService()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     models.Base.metadata.create_all(bind=engine)
     mqtt_service.start()
     yield
+
+
 app = FastAPI(title="Virtual Parking Simulator", lifespan=lifespan)
 
 static_path = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_path), name="static")
+
 
 @app.websocket("/ws/stats")
 async def websocket_endpoint(websocket: WebSocket):
@@ -33,6 +40,7 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
+
 
 def get_parking_manager(db: Session = Depends(get_db)):
     prices = {0: 6, 1: 5, 2: 4, 3: 3, 4: 2}
@@ -46,23 +54,45 @@ def get_parking_manager(db: Session = Depends(get_db)):
 
 @app.get("/")
 def read_root():
-    return {"message": "Parking Simulator is online"}
+    return {"message": "Parking Simulator is online. Go to /dashboard"}
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def get_dashboard():
     base_path = os.path.dirname(os.path.abspath(__file__))
     html_path = os.path.join(base_path, "templates", "dashboard.html")
-
     with open(html_path, "r", encoding="utf-8") as f:
         return f.read()
 
 
+security = HTTPBasic()
+
+
+@app.post("/login")
+def login(credentials: HTTPBasicCredentials = Depends(security)):
+    if credentials.username == "admin" and credentials.password == "admin":
+        return {"status": "Logged in", "token": "demo-token-123"}
+    raise HTTPException(status_code=401, detail="Invalid credentials")
+
+
+@app.post("/logout")
+def logout():
+    return {"status": "Logged out"}
+
+
 @app.post("/entry", status_code=201)
-def register_vehicle_entry(entry: EntryRequest, manager: ParkingManager = Depends(get_parking_manager)):
+async def register_vehicle_entry(entry: EntryRequest, manager: ParkingManager = Depends(get_parking_manager)):
     try:
-        success = manager.register_entry(entry.country, entry.registration_no, entry.floor)
-        return {"status": success, "country": entry.country, "registration_no": entry.registration_no}
+        result = manager.register_entry(entry.country, entry.registration_no, entry.floor)
+
+        await ws_manager.broadcast({
+            "type": "VEHICLE_ENTRY",
+            "reg_no": entry.registration_no,
+            "floor": result['floor'],
+            "spot": result['spot']
+        })
+
+        return {"status": result, "country": entry.country, "registration_no": entry.registration_no}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -84,10 +114,19 @@ def update_floor(country: str, registration_no: str, update_data: UpdateFloorReq
 
 
 @app.delete("/entry/{country}/{registration_no}")
-def register_vehicle_exit(country: str, registration_no: str, manager: ParkingManager = Depends(get_parking_manager)):
+async def register_vehicle_exit(country: str, registration_no: str,
+                                manager: ParkingManager = Depends(get_parking_manager)):
     try:
-        success = manager.register_exit(country, registration_no)
-        return {"status": success, "country": country, "registration_no": registration_no}
+        result = manager.register_exit(country, registration_no)
+
+        await ws_manager.broadcast({
+            "type": "VEHICLE_EXIT",
+            "reg_no": registration_no,
+            "floor": result['floor'],
+            "spot": result['spot']
+        })
+
+        return {"status": result, "country": country, "registration_no": registration_no}
     except ValueError as e:
         status_code = 404 if "not found" in str(e) else 400
         raise HTTPException(status_code=status_code, detail=str(e))
@@ -102,10 +141,18 @@ def get_payment(country: str, registration_no: str, manager: ParkingManager = De
 
 
 @app.post("/payment/{country}/{registration_no}", status_code=200)
-def make_payment(country: str, registration_no: str, payment: PaymentRequest,
-                 manager: ParkingManager = Depends(get_parking_manager)):
+async def make_payment(country: str, registration_no: str, payment: PaymentRequest,
+                       manager: ParkingManager = Depends(get_parking_manager)):
     try:
-        return manager.pay_parking_fee(country, registration_no, payment.amount)
+        manager.pay_parking_fee(country, registration_no, payment.amount)
+
+        await ws_manager.broadcast({
+            "type": "PAYMENT_SUCCESS",
+            "reg_no": registration_no,
+            "amount": payment.amount
+        })
+
+        return {"status": "paid", "amount": payment.amount}
     except ValueError as e:
         status_code = 404 if "not found" in str(e) else 400
         raise HTTPException(status_code=status_code, detail=str(e))

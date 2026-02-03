@@ -6,9 +6,12 @@ from src.app.schemas import EntryRequest, UpdateFloorRequest, PaymentRequest
 from src.app.services.parking_manager import ParkingManager
 from src.app.services.pricing import PriceCalculator
 from src.app.services.validator import VehicleValidator
+from contextlib import asynccontextmanager
 
-models.Base.metadata.create_all(bind=engine)
-
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    models.Base.metadata.create_all(bind=engine)
+    yield
 app = FastAPI(title="Virtual Parking Simulator")
 
 

@@ -6,43 +6,35 @@ import os
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
-from src.app.main import app, get_db
 from src.app import models
-from src.app.models.base import Base
+
 
 PERF_DB_FILE = "perf_stability_test.db"
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{PERF_DB_FILE}"
+engine_test = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+TestingSessionLocal = sessionmaker(bind=engine_test)
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False, "timeout": 30}
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+from src.app.main import app, get_db
+from src.app.models.base import Base
 
+def override_get_db():
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+app.dependency_overrides[get_db] = override_get_db
 
 class TestPerformance:
     @pytest.fixture(scope="class", autouse=True)
     def setup_db(self):
-        if os.path.exists(PERF_DB_FILE):
-            try:
-                os.remove(PERF_DB_FILE)
-            except PermissionError:
-                pass
-
-        Base.metadata.create_all(bind=engine)
-
+        Base.metadata.create_all(bind=engine_test)
         yield
-
-        Base.metadata.drop_all(bind=engine)
-
-        engine.dispose()
-
+        Base.metadata.drop_all(bind=engine_test)
+        engine_test.dispose()
         if os.path.exists(PERF_DB_FILE):
-            try:
-                time.sleep(0.5)
-                os.remove(PERF_DB_FILE)
-            except PermissionError:
-                print(f"Ostrzeżenie: Nie udało się usunąć {PERF_DB_FILE}. Plik zostanie nadpisany w kolejnym teście.")
+            os.remove(PERF_DB_FILE)
 
     @pytest.fixture
     def client(self):

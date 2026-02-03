@@ -19,17 +19,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    - name: Start FastAPI server
-      env:
-        PYTHONPATH: ${{ github.workspace }}
+    - name: Start FastAPI in background
       run: |
-        python3 -m uvicorn src.app.main:app --host 127.0.0.1 --port 8000 &
+        python -m uvicorn src.app.main:app --host 0.0.0.0 --port 8000 &
         sleep 5
-    - name: Execute API tests
-      env:
-        PYTHONPATH: ${{ github.workspace }}
-      run: |
-        python3 -m pytest tests/api
+    - name: Run API tests
+      run: python -m pytest tests/api
     - name: Execute BDD tests
       run: |
         behave

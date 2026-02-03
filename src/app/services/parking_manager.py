@@ -97,7 +97,7 @@ class ParkingManager:
             "payment_time": active.payment_time
         }
 
-    def register_exit(self, country: str, registration_no: str) -> bool:
+    def register_exit(self, country: str, registration_no: str) -> Dict[str, Any]:
         vehicle = self.db.query(Vehicle).filter_by(registration_no=registration_no, country=country).first()
         if not vehicle or not vehicle.active_parking:
             raise ValueError("Vehicle not found on parking")
@@ -109,17 +109,20 @@ class ParkingManager:
         if datetime.now() - active.payment_time > timedelta(minutes=15):
             raise ValueError("Payment expired. 15 minutes exceeded")
 
+        floor = active.floor
+        spot = active.spot_number
+
         history_entry = ParkingHistory(
             vehicle_id=vehicle.id,
             entry_time=active.entry_time,
             exit_time=datetime.now(),
-            floor=active.floor,
+            floor=floor,
             fee=active.paid_fee
         )
         self.db.add(history_entry)
         self.db.delete(active)
         self.db.commit()
-        return True
+        return {"floor": floor, "spot" : spot, "status": True}
 
     def change_vehicle_floor(self, country: str, registration_no: str, new_floor: int) -> bool:
         if new_floor < 0 or new_floor > 4:

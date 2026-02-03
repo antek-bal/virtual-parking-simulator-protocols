@@ -5,10 +5,13 @@ import paho.mqtt.client as mqtt
 
 MQTT_BROKER = "localhost"
 MQTT_PORT = 1883
-MQTT_TOPIC = "parking/entrance/camera"
+TOPIC_ENTRANCE = "parking/entrance/camera"
+TOPIC_EXIT = "parking/exit/camera"
+TOPIC_PAYMENT = "parking/parking_meter/pay"
 
 client = mqtt.Client()
-client.connect("localhost", 1883, 60)
+
+parked_vehicles = []
 
 
 def generate_random_vehicle():
@@ -28,15 +31,14 @@ def generate_random_vehicle():
         if n <= 90:
             prefix = "GD"
         elif n <= 95:
-            prefix = f"G{random.choice(["A", "BY", "CH", "CZ", "DA", "KA", "KS", "KW", "KY", "KZ", "LE", "MB", "ND", 
-                                        "PU", "S", "SL", "SP", "ST", "SZ", "TC", "WE", "WO"])}"
+            prefix = f"G{random.choice(['A', 'BY', 'CH', 'CZ', 'DA', 'KA', 'KS', 'KW', 'KY', 'KZ', 'LE', 'MB', 'ND', 'PU', 'S', 'SL', 'SP', 'ST', 'SZ', 'TC', 'WE', 'WO'])}"
         else:
-            first_letter = random.choice(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "R", "S", "T", "V", "W", "X", "Y", "Z"])
-            second_letter = random.choice(letters)
-            prefix = f"{first_letter}{second_letter}"
+            first_letters = ["B", "C", "D", "E", "F", "G", "K", "L", "N", "O", "P", "R", "S", "T", "W", "Z"]
+            prefix = f"{random.choice(first_letters)}{random.choice(letters)}"
         reg_no = f"{prefix}{random.choice(letters)}{random.randint(100, 999)}{random.choice(letters)}"
     else:
         reg_no = f"{random.choice(letters)}{random.choice(letters)}{random.randint(100, 999)}{random.choice(letters)}"
+
     return {
         "country": country,
         "registration_no": reg_no,
@@ -47,21 +49,40 @@ def generate_random_vehicle():
 def run_simulation():
     try:
         client.connect(MQTT_BROKER, MQTT_PORT, 60)
-        print("Simulator is running")
+        client.loop_start()
+        print(f"Simulator running")
     except Exception as e:
-        print(f"Error while connecting to broker: {e}")
+        print(f"Error while connecting to Broker: {e}")
         return
 
     while True:
-        if random.random() < 0.10:
+        chance = random.random()
+
+        if chance < 0.15:
             vehicle = generate_random_vehicle()
-            payload = json.dumps(vehicle)
+            client.publish(TOPIC_ENTRANCE, json.dumps(vehicle))
+            parked_vehicles.append(vehicle)
+            print(f"[ENTRY] Camera: {vehicle['country']}_{vehicle['registration_no']}, Floor: {vehicle['floor']}")
 
-            client.publish(MQTT_TOPIC, payload)
-            print(f"SENT: {vehicle['country']} | {vehicle['registration_no']} has entered the floor {vehicle['floor']}")
+        elif 0.15 <= chance < 0.25:
+            if parked_vehicles:
+                v = random.choice(parked_vehicles)
+                payload = {"country": v['country'], "registration_no": v['registration_no']}
+                client.publish(TOPIC_PAYMENT, json.dumps(payload))
+                print(f"[PAY] Parking meter: Payment for {v['registration_no']}")
 
-        time.sleep(5)
+        elif 0.25 <= chance < 0.30:
+            if parked_vehicles:
+                v = parked_vehicles.pop(0)
+                payload = {"country": v['country'], "registration_no": v['registration_no']}
+                client.publish(TOPIC_EXIT, json.dumps(payload))
+                print(f"[EXIT] Exit camera: {v['registration_no']}")
+
+        time.sleep(3)
 
 
 if __name__ == "__main__":
-    run_simulation()
+    try:
+        run_simulation()
+    except KeyboardInterrupt:
+        client.disconnect()

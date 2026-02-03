@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 async def lifespan(app: FastAPI):
     models.Base.metadata.create_all(bind=engine)
     yield
-app = FastAPI(title="Virtual Parking Simulator")
+app = FastAPI(title="Virtual Parking Simulator", lifespan=lifespan)
 
 
 def get_parking_manager(db: Session = Depends(get_db)):

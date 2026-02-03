@@ -3,14 +3,6 @@ from sqlalchemy.orm import relationship
 from src.app.models.base import Base
 from datetime import datetime
 
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String(20), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
-
-
 class Vehicle(Base):
     __tablename__ = "vehicles"
 

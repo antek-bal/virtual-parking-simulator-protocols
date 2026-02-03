@@ -124,7 +124,7 @@ class ParkingManager:
         self.db.commit()
         return {"floor": floor, "spot" : spot, "status": True}
 
-    def change_vehicle_floor(self, country: str, registration_no: str, new_floor: int) -> bool:
+    def change_vehicle_floor(self, country: str, registration_no: str, new_floor: int) -> Dict[str, Any]:
         if new_floor < 0 or new_floor > 4:
             raise ValueError(f"Floor {new_floor} is not available")
 
@@ -132,6 +132,20 @@ class ParkingManager:
         if not vehicle or not vehicle.active_parking:
             raise ValueError("Vehicle not found on parking")
 
+        occupied = self.db.query(ActiveParking.spot_number).filter_by(floor=new_floor).all()
+        occupied_spots = {s[0] for s in occupied}
+
+        assigned_spot = None
+        for spot in range(1, 51):
+            if spot not in occupied_spots:
+                assigned_spot = spot
+                break
+
+        if assigned_spot is None:
+            raise ValueError(f"No free spots on floor {new_floor}")
+
         vehicle.active_parking.floor = new_floor
+        vehicle.active_parking.spot_number = assigned_spot
+
         self.db.commit()
-        return True
+        return {"status": True, "new_floor": new_floor, "new_spot": assigned_spot}

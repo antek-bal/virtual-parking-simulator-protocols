@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parking Management System</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <div id="login-screen" class="login-container">
+        <div class="login-box">
+            <h1>Parking Admin</h1>
+            <p>Log in to access the dashboard</p>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="handleLogin()" class="btn-primary">Login</button>
+            <p id="login-error" class="error-msg"></p>
+        </div>
+    </div>
+
+    <div id="app-screen" class="main-container hidden">
+
+        <header>
+            <h1>Parking Management System</h1>
+            <button onclick="handleLogout()" class="btn-danger">Logout</button>
+        </header>
+
+        <section class="stats-grid">
+            <div class="stat-card">
+                <h3>System Status</h3>
+                <span id="status" class="stat-value">OPEN</span>
+            </div>
+            <div class="stat-card">
+                <h3>Occupancy</h3>
+                <span id="occupancy" class="stat-value">0</span>
+            </div>
+            <div class="stat-card">
+                <h3>Revenue</h3>
+                <span id="revenue" class="stat-value">0.00 PLN</span>
+            </div>
+        </section>
+
+        <div class="content-wrapper">
+
+            <div class="left-column">
+                <h3>Event Stream</h3>
+                <div id="events" class="event-log"></div>
+            </div>
+
+            <div class="right-column">
+
+                <div class="control-panel">
+                    <h2>Parking Operations</h2>
+
+                    <div class="form-group">
+                        <label>Manual Entry</label>
+                        <div class="input-row">
+                            <input type="text" id="park_reg" placeholder="Registration number">
+                            <input type="text" id="park_country" placeholder="Country" value="PL" style="width: 60px;">
+                            <input type="number" id="park_floor" placeholder="Floor" value="" min="0" max="4" style="width: 60px;">
+                            <button onclick="manualEntry()" class="btn-success">Entry</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Manage Vehicle</label>
+                        <div class="input-row">
+                            <input type="text" id="manage_reg" placeholder="Registration number">
+                            <button onclick="updateFloor()" class="btn-warning">Move Floor</button>
+                            <button onclick="manualExit()" class="btn-danger">Exit</button>
+                        </div>
+                    </div>
+                     <div id="parking-response" class="api-response"></div>
+                </div>
+
+                <div class="control-panel">
+                    <h2>Active Vehicles List</h2>
+
+                    <div class="form-group">
+                        <button onclick="listActiveVehicles()" class="btn-secondary">Refresh List</button>
+                    </div>
+
+                    <table id="vehicles-table">
+                        <thead>
+                            <tr>
+                                <th>Reg No</th>
+                                <th>Location</th>
+                                <th>Payment</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

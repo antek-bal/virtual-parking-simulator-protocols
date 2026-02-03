@@ -58,7 +58,7 @@ def read_root():
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def get_dashboard():
+def get_dashboard():
     base_path = os.path.dirname(os.path.abspath(__file__))
     html_path = os.path.join(base_path, "templates", "dashboard.html")
     with open(html_path, "r", encoding="utf-8") as f:
@@ -81,11 +81,11 @@ def logout():
 
 
 @app.post("/entry", status_code=201)
-async def register_vehicle_entry(entry: EntryRequest, manager: ParkingManager = Depends(get_parking_manager)):
+def register_vehicle_entry(entry: EntryRequest, manager: ParkingManager = Depends(get_parking_manager)):
     try:
         result = manager.register_entry(entry.country, entry.registration_no, entry.floor)
 
-        await ws_manager.broadcast({
+        ws_manager.broadcast({
             "type": "VEHICLE_ENTRY",
             "reg_no": entry.registration_no,
             "floor": result['floor'],
@@ -114,12 +114,12 @@ def update_floor(country: str, registration_no: str, update_data: UpdateFloorReq
 
 
 @app.delete("/entry/{country}/{registration_no}")
-async def register_vehicle_exit(country: str, registration_no: str,
+def register_vehicle_exit(country: str, registration_no: str,
                                 manager: ParkingManager = Depends(get_parking_manager)):
     try:
         result = manager.register_exit(country, registration_no)
 
-        await ws_manager.broadcast({
+        ws_manager.broadcast({
             "type": "VEHICLE_EXIT",
             "reg_no": registration_no,
             "floor": result['floor'],
@@ -141,12 +141,12 @@ def get_payment(country: str, registration_no: str, manager: ParkingManager = De
 
 
 @app.post("/payment/{country}/{registration_no}", status_code=200)
-async def make_payment(country: str, registration_no: str, payment: PaymentRequest,
+def make_payment(country: str, registration_no: str, payment: PaymentRequest,
                        manager: ParkingManager = Depends(get_parking_manager)):
     try:
         manager.pay_parking_fee(country, registration_no, payment.amount)
 
-        await ws_manager.broadcast({
+        ws_manager.broadcast({
             "type": "PAYMENT_SUCCESS",
             "reg_no": registration_no,
             "amount": payment.amount

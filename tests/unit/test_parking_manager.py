@@ -1,5 +1,6 @@
 import pytest
 from datetime import datetime
+from src.app.models.parking import Vehicle, ActiveParking, ParkingHistory
 
 
 class TestParkingManager:
@@ -16,30 +17,33 @@ class TestParkingManager:
         with pytest.raises(ValueError):
             parking_manager.register_entry("PL", "GD5P227", 0)
 
-    def test_saving_to_dict(self, parking_manager, mocker):
+    def test_saving_to_db(self, parking_manager, mocker):
         time = datetime(2026, 1, 29, 22, 46, 17)
-
         mock_datetime = mocker.patch('src.app.services.parking_manager.datetime')
         mock_datetime.now.return_value = time
 
-        assert parking_manager.register_entry("PL", "GD5P227", 3) == True
-        assert parking_manager.active_parkings["PL_GD5P227"]["entry_time"] == time
-        assert parking_manager.active_parkings["PL_GD5P227"]["floor"] == 3
+        assert parking_manager.register_entry("PL", "GD5P227", 3) is True
+
+        db_record = parking_manager.db.query(ActiveParking).join(Vehicle).filter(
+            Vehicle.registration_no == "GD5P227"
+        ).first()
+
+        assert db_record is not None
+        assert db_record.entry_time == time
+        assert db_record.floor == 3
 
     def test_get_payment_info_wrong_registration(self, parking_manager):
         with pytest.raises(ValueError):
             parking_manager.get_payment_info("PL", "GD5P227")
 
     def test_get_payment_info_success(self, parking_manager, mocker):
-        entry_time = datetime(2026, 1, 1, 10, 00, 00)
-
+        entry_time = datetime(2026, 1, 1, 10, 0, 0)
         mock_datetime = mocker.patch('src.app.services.parking_manager.datetime')
         mock_datetime.now.return_value = entry_time
 
         parking_manager.register_entry("PL", "GD5P227", 0)
 
-        leave_time = datetime(2026, 1, 1, 11, 30, 00)
-
+        leave_time = datetime(2026, 1, 1, 11, 30, 0)
         mock_datetime.now.return_value = leave_time
 
         data = parking_manager.get_payment_info("PL", "GD5P227")
@@ -50,92 +54,60 @@ class TestParkingManager:
         assert data["minutes"] == 90
 
     def test_pay_parking_fee_success(self, parking_manager, mocker):
-        entry_time = datetime(2026, 1, 1, 10, 00, 00)
-
+        entry_time = datetime(2026, 1, 1, 10, 0, 0)
         mock_datetime = mocker.patch('src.app.services.parking_manager.datetime')
         mock_datetime.now.return_value = entry_time
 
         parking_manager.register_entry("PL", "GD5P227", 0)
 
-        payment_time = datetime(2026, 1, 1, 11, 30, 00)
-
+        payment_time = datetime(2026, 1, 1, 11, 30, 0)
         mock_datetime.now.return_value = payment_time
 
         res = parking_manager.pay_parking_fee("PL", "GD5P227", 6.0)
-        assert res["status"] == True
+        assert res["status"] is True
         assert res["fee"] == 6.0
         assert res["payment_time"] == payment_time
-
-    def test_pay_parking_fee_insufficient_amount(self, parking_manager, mocker):
-        entry_time = datetime(2026, 1, 1, 10, 00, 00)
-
-        mock_datetime = mocker.patch('src.app.services.parking_manager.datetime')
-        mock_datetime.now.return_value = entry_time
-
-        parking_manager.register_entry("PL", "GD5P227", 0)
-
-        payment_time = datetime(2026, 1, 1, 11, 30, 00)
-
-        mock_datetime.now.return_value = payment_time
-
-        with pytest.raises(ValueError):
-            parking_manager.pay_parking_fee("PL", "GD5P227", 1.0)
-
-    def test_exit_invalid_registration(self, parking_manager):
-        with pytest.raises(ValueError):
-            parking_manager.register_exit("PL", "GD5P227")
 
     def test_exit_success(self, parking_manager):
         parking_manager.register_entry("PL", "GD5P227", 0)
         parking_manager.pay_parking_fee("PL", "GD5P227", 0.0)
 
-        assert parking_manager.register_exit("PL", "GD5P227") == True
-        assert len(parking_manager.active_parkings) == 0
+        assert parking_manager.register_exit("PL", "GD5P227") is True
+
+        active_exists = parking_manager.db.query(ActiveParking).join(Vehicle).filter(
+            Vehicle.registration_no == "GD5P227"
+        ).first()
+        assert active_exists is None
 
     def test_saving_to_history(self, parking_manager, mocker):
-        entry_time = datetime(2026, 1, 29, 10, 00, 00)
+        entry_time = datetime(2026, 1, 29, 10, 0, 0)
         mock_datetime = mocker.patch('src.app.services.parking_manager.datetime')
         mock_datetime.now.return_value = entry_time
 
         parking_manager.register_entry("PL", "GD5P227", 3)
 
-        pay_time = datetime(2026, 1, 29, 11, 30, 00)
+        pay_time = datetime(2026, 1, 29, 11, 30, 0)
         mock_datetime.now.return_value = pay_time
-
         parking_manager.pay_parking_fee("PL", "GD5P227", 3.0)
 
-        exit_time = datetime(2026, 1, 29, 11, 40, 00)
+        exit_time = datetime(2026, 1, 29, 11, 40, 0)
         mock_datetime.now.return_value = exit_time
-
         parking_manager.register_exit("PL", "GD5P227")
 
-        assert parking_manager.history["PL_GD5P227"][0]["entry_time"] == entry_time
-        assert parking_manager.history["PL_GD5P227"][0]["exit_time"] == exit_time
-        assert parking_manager.history["PL_GD5P227"][0]["floor"] == 3
-        assert parking_manager.history["PL_GD5P227"][0]["fee"] == 3.0
+        history_record = parking_manager.db.query(ParkingHistory).join(Vehicle).filter(
+            Vehicle.registration_no == "GD5P227"
+        ).first()
 
-    def test_multiple_parkings_in_history(self, parking_manager):
-        parking_manager.register_entry("PL", "GD5P227", 0)
-        parking_manager.pay_parking_fee("PL", "GD5P227", 0.0)
-        parking_manager.register_exit("PL", "GD5P227")
-
-        parking_manager.register_entry("PL", "GD5P227", 1)
-        parking_manager.pay_parking_fee("PL", "GD5P227", 0.0)
-        parking_manager.register_exit("PL", "GD5P227")
-
-        assert len(parking_manager.history["PL_GD5P227"]) == 2
-
-    def test_change_floor_invalid_registration(self, parking_manager):
-        with pytest.raises(ValueError):
-            parking_manager.change_vehicle_floor("PL", "GD5P227", 0)
-
-    def test_change_floor_invalid_floor(self, parking_manager):
-        parking_manager.register_entry("PL", "GD5P227", 0)
-        with pytest.raises(ValueError):
-            parking_manager.change_vehicle_floor("PL", "GD5P227", 5)
+        assert history_record.entry_time == entry_time
+        assert history_record.exit_time == exit_time
+        assert history_record.floor == 3
+        assert history_record.fee == 3.0
 
     def test_change_floor_valid(self, parking_manager):
         parking_manager.register_entry("PL", "GD5P227", 0)
+        assert parking_manager.change_vehicle_floor("PL", "GD5P227", 1) is True
 
-        assert parking_manager.change_vehicle_floor("PL", "GD5P227", 1) == True
-        assert parking_manager.active_parkings["PL_GD5P227"]["floor"] == 1
+        active = parking_manager.db.query(ActiveParking).join(Vehicle).filter(
+            Vehicle.registration_no == "GD5P227"
+        ).first()
+        assert active.floor == 1

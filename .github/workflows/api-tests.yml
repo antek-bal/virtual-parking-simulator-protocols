@@ -9,6 +9,20 @@ on:
 jobs:
   api-testing:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: parking_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python 3.12
@@ -19,17 +33,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    - name: Start FastAPI server
-      env:
-        PYTHONPATH: ${{ github.workspace }}
+    - name: Start FastAPI in background
       run: |
-        python3 -m uvicorn src.app.main:app --host 127.0.0.1 --port 8000 &
-        sleep 5
-    - name: Execute API tests
-      env:
-        PYTHONPATH: ${{ github.workspace }}
-      run: |
-        python3 -m pytest tests/api
+        python -m uvicorn src.app.main:app --host 0.0.0.0 --port 8000 &
+        sleep 10
+    - name: Run API tests
+      run: python -m pytest tests/api
     - name: Execute BDD tests
       run: |
         behave
